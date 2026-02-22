@@ -117,35 +117,19 @@ void operationsMenu(BaseSet* set1) {
             std::cin >> saveChoice;
 
             if (saveChoice == 1) {
-                // Пытаемся привести к Set
-                Set* setResult = dynamic_cast<Set*>(result);
-                if (!setResult) {
-                    // Если не получилось, создаем новое множество
-                    setResult = new Set();
-                    const auto& items = result->GetItems();
-                    for (const auto& item : items) {
-                        setResult->Add(item.GetValue());
-                    }
+                Set* setResult = result->ToSet();
+                if (result != setResult) {
                     delete result;
-                    result = setResult;
                 }
-                sets.push_back(result);
+                sets.push_back(setResult);
                 std::cout << "Результат сохранен как множество #" << sets.size() << std::endl;
             }
             else if (saveChoice == 2) {
-                // Пытаемся привести к MultiSet
-                MultiSet* multiResult = dynamic_cast<MultiSet*>(result);
-                if (!multiResult) {
-                    // Если не получилось, создаем новое мультимножество
-                    multiResult = new MultiSet();
-                    const auto& items = result->GetItems();
-                    for (const auto& item : items) {
-                        multiResult->Add(item.GetValue(), item.GetCount());
-                    }
+                MultiSet* multiResult = result->ToMultiSet();
+                if (result != multiResult) {
                     delete result;
-                    result = multiResult;
                 }
-                multiSets.push_back(result);
+                multiSets.push_back(multiResult);
                 std::cout << "Результат сохранен как мультимножество #" << multiSets.size() << std::endl;
             }
             else {
@@ -167,6 +151,7 @@ void menuSet(BaseSet* set) {
         std::cout << "5. Операции с другими множествами" << std::endl;
         std::cout << "6. Преобразовать в мультимножество" << std::endl;
         std::cout << "7. Клонировать множество" << std::endl;
+        std::cout << "8. Очистить множество" << std::endl;
         std::cout << "0. Назад" << std::endl;
         std::cout << "Выбор: ";
         std::cin >> choice;
@@ -200,13 +185,10 @@ void menuSet(BaseSet* set) {
             operationsMenu(set);
             break;
         case 6: {
-            Set* mySet = dynamic_cast<Set*>(set);
-            if (mySet) {
-                MultiSet* multiSet = mySet->ToMultiSet();
-                multiSets.push_back(multiSet);
-                std::cout << "Создано мультимножество #" << multiSets.size() << std::endl;
-                multiSet->Print();
-            }
+            MultiSet* multiSet = set->ToMultiSet();
+            multiSets.push_back(multiSet);
+            std::cout << "Создано мультимножество #" << multiSets.size() << std::endl;
+            multiSet->Print();
             break;
         }
         case 7: {
@@ -215,6 +197,10 @@ void menuSet(BaseSet* set) {
             std::cout << "Создана копия как множество #" << sets.size() << std::endl;
             break;
         }
+        case 8:
+            set->Clear();
+            std::cout << "Множество очищено" << std::endl;
+            break;
         }
     } while (choice != 0);
 }
@@ -227,13 +213,14 @@ void menuMultiSet(BaseSet* multiSet) {
         std::cout << "1. Добавить элемент" << std::endl;
         std::cout << "2. Добавить несколько одинаковых элементов" << std::endl;
         std::cout << "3. Удалить один экземпляр элемента" << std::endl;
-        std::cout << "4. Удалить несколько экземпляров элемента" << std::endl;
+        std::cout << "4. Удалить все экземпляры элемента" << std::endl;
         std::cout << "5. Проверить наличие элемента" << std::endl;
         std::cout << "6. Получить количество экземпляров элемента" << std::endl;
         std::cout << "7. Показать мультимножество" << std::endl;
         std::cout << "8. Операции с другими множествами" << std::endl;
         std::cout << "9. Преобразовать в обычное множество" << std::endl;
         std::cout << "10. Клонировать мультимножество" << std::endl;
+        std::cout << "11. Очистить мультимножество" << std::endl;
         std::cout << "0. Назад" << std::endl;
         std::cout << "Выбор: ";
         std::cin >> choice;
@@ -252,9 +239,8 @@ void menuMultiSet(BaseSet* multiSet) {
             std::cin >> value;
             std::cout << "Введите количество: ";
             std::cin >> count;
-            MultiSet* ms = dynamic_cast<MultiSet*>(multiSet);
-            if (ms) {
-                ms->Add(value, count);
+            for (int i = 0; i < count; ++i) {
+                multiSet->Add(value);
             }
             break;
         }
@@ -266,14 +252,11 @@ void menuMultiSet(BaseSet* multiSet) {
             break;
         }
         case 4: {
-            int value, count;
+            int value;
             std::cout << "Введите значение: ";
             std::cin >> value;
-            std::cout << "Введите количество для удаления: ";
-            std::cin >> count;
-            MultiSet* ms = dynamic_cast<MultiSet*>(multiSet);
-            if (ms) {
-                ms->Delete(value, count);
+            while (multiSet->Exist(value)) {
+                multiSet->Delete(value);
             }
             break;
         }
@@ -298,13 +281,10 @@ void menuMultiSet(BaseSet* multiSet) {
             operationsMenu(multiSet);
             break;
         case 9: {
-            MultiSet* ms = dynamic_cast<MultiSet*>(multiSet);
-            if (ms) {
-                Set* set = ms->ToSet();
-                sets.push_back(set);
-                std::cout << "Создано множество #" << sets.size() << std::endl;
-                set->Print();
-            }
+            Set* set = multiSet->ToSet();
+            sets.push_back(set);
+            std::cout << "Создано множество #" << sets.size() << std::endl;
+            set->Print();
             break;
         }
         case 10: {
@@ -313,6 +293,10 @@ void menuMultiSet(BaseSet* multiSet) {
             std::cout << "Создана копия как мультимножество #" << multiSets.size() << std::endl;
             break;
         }
+        case 11:
+            multiSet->Clear();
+            std::cout << "Мультимножество очищено" << std::endl;
+            break;
         }
     } while (choice != 0);
 }
@@ -425,7 +409,6 @@ int main() {
         }
     } while (choice != 0);
 
-    // Очистка памяти
     for (auto set : sets) delete set;
     for (auto multiSet : multiSets) delete multiSet;
 

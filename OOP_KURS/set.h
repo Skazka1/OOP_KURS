@@ -6,19 +6,6 @@
 #include <algorithm>
 #include <cmath>
 
-class Item {
-private:
-    int value;
-    int count;
-public:
-    Item(int v, int c = 1) : value(v), count(c) {}
-    int GetValue() const { return value; }
-    int GetCount() const { return count; }
-    void AddCount(int c = 1) { count += c; }
-    void SetCount(int c) { count = c; }
-    void DecCount() { if (count > 0) count--; }
-};
-
 class Set;
 class MultiSet;
 
@@ -26,7 +13,7 @@ enum class SetType { SET, MULTISET };
 
 class BaseSet {
 protected:
-    std::vector<Item> items;
+    std::vector<int> items;
 public:
     virtual ~BaseSet() {}
 
@@ -35,11 +22,12 @@ public:
     virtual bool Exist(int value) const = 0;
     virtual int Power() const = 0;
     virtual int Unic() const = 0;
+    virtual void Clear() = 0;
 
     virtual int GetMultiplicity(int value) const = 0;
     virtual SetType getType() const = 0;
 
-    const std::vector<Item>& GetItems() const { return items; }
+    const std::vector<int>& GetItems() const { return items; }
 
     virtual BaseSet* Union(const BaseSet* other) const = 0;
     virtual BaseSet* Intersection(const BaseSet* other) const = 0;
@@ -49,11 +37,14 @@ public:
     virtual BaseSet* Clone() const = 0;
     virtual void Print() const = 0;
 
+    virtual Set* ToSet() = 0;
+    virtual MultiSet* ToMultiSet() = 0;
+
     bool operator==(const BaseSet& other) const {
         if (Power() != other.Power() || Unic() != other.Unic()) return false;
 
         for (const auto& item : items) {
-            if (GetMultiplicity(item.GetValue()) != other.GetMultiplicity(item.GetValue())) {
+            if (GetMultiplicity(item) != other.GetMultiplicity(item)) {
                 return false;
             }
         }
@@ -77,8 +68,24 @@ public:
     Set() {}
     Set(const Set& other) {
         for (const auto& item : other.items) {
-            Add(item.GetValue());
+            Add(item);
         }
+    }
+
+    explicit Set(const std::vector<int>& values) {
+        for (const auto& value : values) {
+            Add(value);
+        }
+    }
+
+    Set& operator=(const Set& other) {
+        if (this != &other) {
+            items.clear();
+            for (const auto& item : other.items) {
+                Add(item);
+            }
+        }
+        return *this;
     }
 
     void Add(int value) override;
@@ -86,6 +93,7 @@ public:
     bool Exist(int value) const override;
     int Power() const override;
     int Unic() const override;
+    void Clear() override { items.clear(); }
     int GetMultiplicity(int value) const override;
     SetType getType() const override { return SetType::SET; }
 
@@ -97,7 +105,8 @@ public:
     BaseSet* Clone() const override;
     void Print() const override;
 
-    MultiSet* ToMultiSet();
+    Set* ToSet() override { return new Set(*this); }
+    MultiSet* ToMultiSet() override;
 };
 
 class MultiSet : public BaseSet {
@@ -105,17 +114,29 @@ public:
     MultiSet() {}
     MultiSet(const MultiSet& other) {
         for (const auto& item : other.items) {
-            Add(item.GetValue(), item.GetCount());
+            Add(item);
         }
     }
 
+    explicit MultiSet(const std::vector<int>& values) {
+        for (const auto& value : values) {
+            Add(value);
+        }
+    }
+
+    MultiSet& operator=(const MultiSet& other) {
+        if (this != &other) {
+            items = other.items;
+        }
+        return *this;
+    }
+
     void Add(int value) override;
-    void Add(int value, int count);
     void Delete(int value) override;
-    void Delete(int value, int count);
     bool Exist(int value) const override;
     int Power() const override;
     int Unic() const override;
+    void Clear() override { items.clear(); }
     int GetMultiplicity(int value) const override;
     SetType getType() const override { return SetType::MULTISET; }
 
@@ -127,7 +148,8 @@ public:
     BaseSet* Clone() const override;
     void Print() const override;
 
-    Set* ToSet();
+    Set* ToSet() override;
+    MultiSet* ToMultiSet() override { return new MultiSet(*this); }
 };
 
 #endif
