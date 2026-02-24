@@ -28,10 +28,22 @@ public:
     virtual SetType getType() const = 0;
 
     const std::vector<int>& GetItems() const { return items; }
+    std::vector<int>& GetItems() { return items; }
 
+    virtual BaseSet* Union(const Set* other) const = 0;
+    virtual BaseSet* Union(const MultiSet* other) const = 0;
     virtual BaseSet* Union(const BaseSet* other) const = 0;
+
+    virtual BaseSet* Intersection(const Set* other) const = 0;
+    virtual BaseSet* Intersection(const MultiSet* other) const = 0;
     virtual BaseSet* Intersection(const BaseSet* other) const = 0;
+
+    virtual BaseSet* Difference(const Set* other) const = 0;
+    virtual BaseSet* Difference(const MultiSet* other) const = 0;
     virtual BaseSet* Difference(const BaseSet* other) const = 0;
+
+    virtual BaseSet* SymmetricDifference(const Set* other) const = 0;
+    virtual BaseSet* SymmetricDifference(const MultiSet* other) const = 0;
     virtual BaseSet* SymmetricDifference(const BaseSet* other) const = 0;
 
     virtual BaseSet* Clone() const = 0;
@@ -40,53 +52,18 @@ public:
     virtual Set* ToSet() = 0;
     virtual MultiSet* ToMultiSet() = 0;
 
-    bool operator==(const BaseSet& other) const {
-        if (Power() != other.Power() || Unic() != other.Unic()) return false;
-
-        for (const auto& item : items) {
-            if (GetMultiplicity(item) != other.GetMultiplicity(item)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool operator!=(const BaseSet& other) const {
-        return !(*this == other);
-    }
-
-    BaseSet& operator=(const BaseSet& other) {
-        if (this != &other) {
-            items = other.items;
-        }
-        return *this;
-    }
+    bool operator==(const BaseSet& other) const;
+    bool operator!=(const BaseSet& other) const;
+    BaseSet& operator=(const BaseSet& other);
 };
 
 class Set : public BaseSet {
 public:
     Set() {}
-    Set(const Set& other) {
-        for (const auto& item : other.items) {
-            Add(item);
-        }
-    }
 
-    explicit Set(const std::vector<int>& values) {
-        for (const auto& value : values) {
-            Add(value);
-        }
-    }
-
-    Set& operator=(const Set& other) {
-        if (this != &other) {
-            items.clear();
-            for (const auto& item : other.items) {
-                Add(item);
-            }
-        }
-        return *this;
-    }
+    Set(const Set& other);
+    explicit Set(const std::vector<int>& values);
+    Set& operator=(const Set& other);
 
     void Add(int value) override;
     void Delete(int value) override;
@@ -97,10 +74,21 @@ public:
     int GetMultiplicity(int value) const override;
     SetType getType() const override { return SetType::SET; }
 
-    BaseSet* Union(const BaseSet* other) const override;
-    BaseSet* Intersection(const BaseSet* other) const override;
-    BaseSet* Difference(const BaseSet* other) const override;
-    BaseSet* SymmetricDifference(const BaseSet* other) const override;
+    BaseSet* Union(const Set* other) const override;
+    BaseSet* Union(const MultiSet* other) const override;
+    BaseSet* Union(const BaseSet* other) const override { return other->Union(this); }
+
+    BaseSet* Intersection(const Set* other) const override;
+    BaseSet* Intersection(const MultiSet* other) const override;
+    BaseSet* Intersection(const BaseSet* other) const override { return other->Intersection(this); }
+
+    BaseSet* Difference(const Set* other) const override;
+    BaseSet* Difference(const MultiSet* other) const override;
+    BaseSet* Difference(const BaseSet* other) const override { return other->Difference(this); }
+
+    BaseSet* SymmetricDifference(const Set* other) const override;
+    BaseSet* SymmetricDifference(const MultiSet* other) const override;
+    BaseSet* SymmetricDifference(const BaseSet* other) const override { return other->SymmetricDifference(this); }
 
     BaseSet* Clone() const override;
     void Print() const override;
@@ -112,24 +100,10 @@ public:
 class MultiSet : public BaseSet {
 public:
     MultiSet() {}
-    MultiSet(const MultiSet& other) {
-        for (const auto& item : other.items) {
-            Add(item);
-        }
-    }
 
-    explicit MultiSet(const std::vector<int>& values) {
-        for (const auto& value : values) {
-            Add(value);
-        }
-    }
-
-    MultiSet& operator=(const MultiSet& other) {
-        if (this != &other) {
-            items = other.items;
-        }
-        return *this;
-    }
+    MultiSet(const MultiSet& other);
+    explicit MultiSet(const std::vector<int>& values);
+    MultiSet& operator=(const MultiSet& other);
 
     void Add(int value) override;
     void Delete(int value) override;
@@ -140,10 +114,21 @@ public:
     int GetMultiplicity(int value) const override;
     SetType getType() const override { return SetType::MULTISET; }
 
-    BaseSet* Union(const BaseSet* other) const override;
-    BaseSet* Intersection(const BaseSet* other) const override;
-    BaseSet* Difference(const BaseSet* other) const override;
-    BaseSet* SymmetricDifference(const BaseSet* other) const override;
+    BaseSet* Union(const Set* other) const override;
+    BaseSet* Union(const MultiSet* other) const override;
+    BaseSet* Union(const BaseSet* other) const override { return other->Union(this); }
+
+    BaseSet* Intersection(const Set* other) const override;
+    BaseSet* Intersection(const MultiSet* other) const override;
+    BaseSet* Intersection(const BaseSet* other) const override { return other->Intersection(this); }
+
+    BaseSet* Difference(const Set* other) const override;
+    BaseSet* Difference(const MultiSet* other) const override;
+    BaseSet* Difference(const BaseSet* other) const override { return other->Difference(this); }
+
+    BaseSet* SymmetricDifference(const Set* other) const override;
+    BaseSet* SymmetricDifference(const MultiSet* other) const override;
+    BaseSet* SymmetricDifference(const BaseSet* other) const override { return other->SymmetricDifference(this); }
 
     BaseSet* Clone() const override;
     void Print() const override;
