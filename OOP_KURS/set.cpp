@@ -47,10 +47,7 @@ void Set::Add(int value) {
 }
 
 void Set::Delete(int value) {
-    auto newEnd = std::remove(items.begin(), items.end(), value);
-    if (newEnd != items.end()) {
-        items.erase(newEnd, items.end());
-    }
+    std::remove(items.begin(), items.end(), value);
 }
 
 bool Set::Exist(int value) const {
@@ -234,8 +231,7 @@ MultiSet* Set::ToMultiSet() {
 
 // Реализация MultiSet
 MultiSet::MultiSet(const MultiSet& other) {
-    const std::vector<int>& otherItems = other.GetItems();
-    items.assign(otherItems.begin(), otherItems.end());
+    items = other.items;
 }
 
 MultiSet::MultiSet(const std::vector<int>& values) {
@@ -255,10 +251,7 @@ void MultiSet::Add(int value) {
 }
 
 void MultiSet::Delete(int value) {
-    auto it = std::find(items.begin(), items.end(), value);
-    if (it != items.end()) {
-        items.erase(it);
-    }
+    std::remove(items.begin(), items.end(), value);
 }
 
 bool MultiSet::Exist(int value) const {
