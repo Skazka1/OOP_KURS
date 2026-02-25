@@ -1,28 +1,57 @@
 ﻿#include "set.h"
 
-// Реализация методов класса Set
+bool BaseSet::operator==(const BaseSet& other) const {
+    if (Power() != other.Power() || Unic() != other.Unic()) return false;
+
+    for (const auto& item : items) {
+        if (GetMultiplicity(item) != other.GetMultiplicity(item)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BaseSet::operator!=(const BaseSet& other) const {
+    return !(*this == other);
+}
+
+BaseSet& BaseSet::operator=(const BaseSet& other) {
+    if (this != &other) {
+        items = other.items;
+    }
+    return *this;
+}
+
+// Реализация Set
+Set::Set(const Set& other) {
+    items = other.items;
+}
+
+Set::Set(const std::vector<int>& values) {
+    items = values;
+    std::sort(items.begin(), items.end());
+    items.erase(std::unique(items.begin(), items.end()), items.end());
+}
+
+Set& Set::operator=(const Set& other) {
+    if (this != &other) {
+        items = other.items;
+    }
+    return *this;
+}
+
 void Set::Add(int value) {
     if (!Exist(value)) {
-        items.push_back(Item(value, 1));
+        items.push_back(value);
     }
 }
 
 void Set::Delete(int value) {
-    for (auto it = items.begin(); it != items.end(); ++it) {
-        if (it->GetValue() == value) {
-            items.erase(it);
-            break;
-        }
-    }
+    std::remove(items.begin(), items.end(), value);
 }
 
 bool Set::Exist(int value) const {
-    for (const auto& item : items) {
-        if (item.GetValue() == value) {
-            return true;
-        }
-    }
-    return false;
+    return std::find(items.begin(), items.end(), value) != items.end();
 }
 
 int Set::Power() const {
@@ -37,120 +66,139 @@ int Set::GetMultiplicity(int value) const {
     return Exist(value) ? 1 : 0;
 }
 
-BaseSet* Set::Union(const BaseSet* other) const {
-    // Если другой операнд - мультимножество, результат должен быть мультимножеством
-    if (other->getType() == SetType::MULTISET) {
-        MultiSet* result = new MultiSet();
+// Union для Set
+BaseSet* Set::Union(const Set* other) const {
+    Set* result = new Set(*this);
 
-        // Добавляем элементы из текущего множества (с кратностью 1)
-        for (const auto& item : items) {
-            result->Add(item.GetValue(), 1);
-        }
+    const auto& otherItems = other->GetItems();
+    for (const auto& item : otherItems) {
+        result->Add(item);
+    }
 
-        // Добавляем элементы из другого мультимножества
-        const auto& otherItems = other->GetItems();
-        for (const auto& item : otherItems) {
-            int currentCount = result->GetMultiplicity(item.GetValue());
-            int otherCount = other->GetMultiplicity(item.GetValue());
+    return result;
+}
+
+BaseSet* Set::Union(const MultiSet* other) const {
+    MultiSet* result = new MultiSet();
+
+    for (const auto& item : items) {
+        result->Add(item);
+    }
+
+    const auto& otherItems = other->GetItems();
+    std::vector<int> processed;
+
+    for (const auto& item : otherItems) {
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = result->GetMultiplicity(item);
+            int otherCount = other->GetMultiplicity(item);
+
             if (otherCount > currentCount) {
-                if (currentCount > 0) {
-                    result->Delete(item.GetValue(), currentCount);
+                for (int i = 0; i < otherCount - currentCount; ++i) {
+                    result->Add(item);
                 }
-                result->Add(item.GetValue(), otherCount);
             }
-        }
-
-        return result;
-    }
-    else {
-        // Оба операнда - обычные множества
-        Set* result = new Set();
-
-        // Добавляем элементы из текущего множества
-        for (const auto& item : items) {
-            result->Add(item.GetValue());
-        }
-
-        // Добавляем элементы из другого множества
-        const auto& otherItems = other->GetItems();
-        for (const auto& item : otherItems) {
-            result->Add(item.GetValue());
-        }
-
-        return result;
-    }
-}
-
-BaseSet* Set::Intersection(const BaseSet* other) const {
-    // Если другой операнд - мультимножество, результат должен быть множеством
-    // (так как пересечение с мультимножеством дает уникальные значения)
-    Set* result = new Set();
-
-    for (const auto& item : items) {
-        if (other->Exist(item.GetValue())) {
-            result->Add(item.GetValue());
+            processed.push_back(item);
         }
     }
 
     return result;
 }
 
-BaseSet* Set::Difference(const BaseSet* other) const {
-    // Разность всегда дает множество
+// Intersection для Set
+BaseSet* Set::Intersection(const Set* other) const {
     Set* result = new Set();
 
     for (const auto& item : items) {
-        if (!other->Exist(item.GetValue())) {
-            result->Add(item.GetValue());
+        if (other->Exist(item)) {
+            result->Add(item);
         }
     }
 
     return result;
 }
 
-BaseSet* Set::SymmetricDifference(const BaseSet* other) const {
-    // Если другой операнд - мультимножество, результат должен быть мультимножеством
-    if (other->getType() == SetType::MULTISET) {
-        MultiSet* result = new MultiSet();
+BaseSet* Set::Intersection(const MultiSet* other) const {
+    Set* result = new Set();
 
-        // Элементы из текущего множества, которых нет в другом
-        for (const auto& item : items) {
-            if (!other->Exist(item.GetValue())) {
-                result->Add(item.GetValue(), 1);
-            }
+    for (const auto& item : items) {
+        if (other->Exist(item)) {
+            result->Add(item);
         }
-
-        // Элементы из другого мультимножества, которых нет в текущем
-        const auto& otherItems = other->GetItems();
-        for (const auto& item : otherItems) {
-            if (!Exist(item.GetValue())) {
-                result->Add(item.GetValue(), item.GetCount());
-            }
-        }
-
-        return result;
     }
-    else {
-        // Оба операнда - обычные множества
-        Set* result = new Set();
 
-        // Элементы из текущего, которых нет в другом
-        for (const auto& item : items) {
-            if (!other->Exist(item.GetValue())) {
-                result->Add(item.GetValue());
-            }
+    return result;
+}
+
+// Difference для Set
+BaseSet* Set::Difference(const Set* other) const {
+    Set* result = new Set();
+
+    for (const auto& item : items) {
+        if (!other->Exist(item)) {
+            result->Add(item);
         }
-
-        // Элементы из другого, которых нет в текущем
-        const auto& otherItems = other->GetItems();
-        for (const auto& item : otherItems) {
-            if (!Exist(item.GetValue())) {
-                result->Add(item.GetValue());
-            }
-        }
-
-        return result;
     }
+
+    return result;
+}
+
+BaseSet* Set::Difference(const MultiSet* other) const {
+    Set* result = new Set();
+
+    for (const auto& item : items) {
+        if (!other->Exist(item)) {
+            result->Add(item);
+        }
+    }
+
+    return result;
+}
+
+// SymmetricDifference для Set
+BaseSet* Set::SymmetricDifference(const Set* other) const {
+    Set* result = new Set();
+
+    for (const auto& item : items) {
+        if (!other->Exist(item)) {
+            result->Add(item);
+        }
+    }
+
+    const auto& otherItems = other->GetItems();
+    for (const auto& item : otherItems) {
+        if (!Exist(item)) {
+            result->Add(item);
+        }
+    }
+
+    return result;
+}
+
+BaseSet* Set::SymmetricDifference(const MultiSet* other) const {
+    MultiSet* result = new MultiSet();
+
+    for (const auto& item : items) {
+        if (!other->Exist(item)) {
+            result->Add(item);
+        }
+    }
+
+    const auto& otherItems = other->GetItems();
+    std::vector<int> processed;
+
+    for (const auto& item : otherItems) {
+        if (!Exist(item) &&
+            std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int otherCount = other->GetMultiplicity(item);
+            for (int i = 0; i < otherCount; ++i) {
+                result->Add(item);
+            }
+            processed.push_back(item);
+        }
+    }
+
+    return result;
 }
 
 BaseSet* Set::Clone() const {
@@ -164,7 +212,7 @@ void Set::Print() const {
     }
     else {
         for (size_t i = 0; i < items.size(); ++i) {
-            std::cout << items[i].GetValue();
+            std::cout << items[i];
             if (i < items.size() - 1) std::cout << ", ";
         }
     }
@@ -176,154 +224,246 @@ void Set::Print() const {
 MultiSet* Set::ToMultiSet() {
     MultiSet* multiSet = new MultiSet();
     for (const auto& item : items) {
-        multiSet->Add(item.GetValue(), 1);
+        multiSet->Add(item);
     }
     return multiSet;
 }
 
-// Реализация методов класса MultiSet
-void MultiSet::Add(int value) {
-    Add(value, 1);
+// Реализация MultiSet
+MultiSet::MultiSet(const MultiSet& other) {
+    items = other.items;
 }
 
-void MultiSet::Add(int value, int count) {
-    for (auto& item : items) {
-        if (item.GetValue() == value) {
-            item.AddCount(count);
-            return;
-        }
+MultiSet::MultiSet(const std::vector<int>& values) {
+    items = values;
+}
+
+MultiSet& MultiSet::operator=(const MultiSet& other) {
+    if (this != &other) {
+        const std::vector<int>& otherItems = other.GetItems();
+        items.assign(otherItems.begin(), otherItems.end());
     }
-    items.push_back(Item(value, count));
+    return *this;
+}
+
+void MultiSet::Add(int value) {
+    items.push_back(value);
 }
 
 void MultiSet::Delete(int value) {
-    Delete(value, 1);
-}
-
-void MultiSet::Delete(int value, int count) {
-    for (auto it = items.begin(); it != items.end(); ++it) {
-        if (it->GetValue() == value) {
-            if (it->GetCount() <= count) {
-                items.erase(it);
-            }
-            else {
-                it->SetCount(it->GetCount() - count);
-            }
-            break;
-        }
-    }
+    std::remove(items.begin(), items.end(), value);
 }
 
 bool MultiSet::Exist(int value) const {
-    return GetMultiplicity(value) > 0;
+    return std::find(items.begin(), items.end(), value) != items.end();
 }
 
 int MultiSet::Power() const {
-    int total = 0;
-    for (const auto& item : items) {
-        total += item.GetCount();
-    }
-    return total;
-}
-
-int MultiSet::Unic() const {
     return items.size();
 }
 
+int MultiSet::Unic() const {
+    std::vector<int> uniqueItems;
+    for (const auto& item : items) {
+        if (std::find(uniqueItems.begin(), uniqueItems.end(), item) == uniqueItems.end()) {
+            uniqueItems.push_back(item);
+        }
+    }
+    return uniqueItems.size();
+}
+
 int MultiSet::GetMultiplicity(int value) const {
-    for (const auto& item : items) {
-        if (item.GetValue() == value) {
-            return item.GetCount();
-        }
-    }
-    return 0;
+    return std::count(items.begin(), items.end(), value);
 }
 
-BaseSet* MultiSet::Union(const BaseSet* other) const {
-    MultiSet* result = new MultiSet();
+// Union для MultiSet
+BaseSet* MultiSet::Union(const Set* other) const {
+    MultiSet* result = new MultiSet(*this);
 
-    // Копируем текущее мультимножество
-    for (const auto& item : items) {
-        result->Add(item.GetValue(), item.GetCount());
-    }
-
-    // Добавляем элементы из другого множества/мультимножества
     const auto& otherItems = other->GetItems();
+    std::vector<int> processed;
+
     for (const auto& item : otherItems) {
-        int currentCount = result->GetMultiplicity(item.GetValue());
-        int otherCount = other->GetMultiplicity(item.GetValue());
-        if (otherCount > currentCount) {
-            if (currentCount > 0) {
-                result->Delete(item.GetValue(), currentCount);
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            if (result->GetMultiplicity(item) == 0) {
+                result->Add(item);
             }
-            result->Add(item.GetValue(), otherCount);
+            processed.push_back(item);
         }
     }
 
     return result;
 }
 
-BaseSet* MultiSet::Intersection(const BaseSet* other) const {
-    if (other->getType() == SetType::SET) {
-        Set* result = new Set();
+BaseSet* MultiSet::Union(const MultiSet* other) const {
+    MultiSet* result = new MultiSet(*this);
 
-        for (const auto& item : items) {
-            if (other->Exist(item.GetValue())) {
-                result->Add(item.GetValue());
+    const auto& otherItems = other->GetItems();
+    std::vector<int> processed;
+
+    for (const auto& item : otherItems) {
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = result->GetMultiplicity(item);
+            int otherCount = other->GetMultiplicity(item);
+
+            if (otherCount > currentCount) {
+                for (int i = 0; i < otherCount - currentCount; ++i) {
+                    result->Add(item);
+                }
             }
+            processed.push_back(item);
         }
-
-        return result;
     }
-    else {
-        MultiSet* result = new MultiSet();
 
-        for (const auto& item : items) {
-            int currentCount = item.GetCount();
-            int otherCount = other->GetMultiplicity(item.GetValue());
+    return result;
+}
+
+// Intersection для MultiSet
+BaseSet* MultiSet::Intersection(const Set* other) const {
+    Set* result = new Set();
+
+    std::vector<int> processed;
+    for (const auto& item : items) {
+        if (other->Exist(item) &&
+            std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            result->Add(item);
+            processed.push_back(item);
+        }
+    }
+
+    return result;
+}
+
+BaseSet* MultiSet::Intersection(const MultiSet* other) const {
+    MultiSet* result = new MultiSet();
+
+    std::vector<int> processed;
+    for (const auto& item : items) {
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = GetMultiplicity(item);
+            int otherCount = other->GetMultiplicity(item);
+
             if (otherCount > 0) {
-                result->Add(item.GetValue(), std::min(currentCount, otherCount));
+                int minCount = std::min(currentCount, otherCount);
+                for (int i = 0; i < minCount; ++i) {
+                    result->Add(item);
+                }
             }
-        }
-
-        return result;
-    }
-}
-
-BaseSet* MultiSet::Difference(const BaseSet* other) const {
-    MultiSet* result = new MultiSet();
-
-    for (const auto& item : items) {
-        int currentCount = item.GetCount();
-        int otherCount = other->GetMultiplicity(item.GetValue());
-        int diffCount = currentCount - otherCount;
-        if (diffCount > 0) {
-            result->Add(item.GetValue(), diffCount);
+            processed.push_back(item);
         }
     }
 
     return result;
 }
 
-BaseSet* MultiSet::SymmetricDifference(const BaseSet* other) const {
+// Difference для MultiSet
+BaseSet* MultiSet::Difference(const Set* other) const {
     MultiSet* result = new MultiSet();
 
+    std::vector<int> processed;
     for (const auto& item : items) {
-        int currentCount = item.GetCount();
-        int otherCount = other->GetMultiplicity(item.GetValue());
-        if (otherCount == 0) {
-            result->Add(item.GetValue(), currentCount);
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = GetMultiplicity(item);
+
+            if (!other->Exist(item)) {
+                for (int i = 0; i < currentCount; ++i) {
+                    result->Add(item);
+                }
+            }
+            processed.push_back(item);
         }
-        else if (currentCount != otherCount) {
-            result->Add(item.GetValue(), std::abs(currentCount - otherCount));
+    }
+
+    return result;
+}
+
+BaseSet* MultiSet::Difference(const MultiSet* other) const {
+    MultiSet* result = new MultiSet();
+
+    std::vector<int> processed;
+    for (const auto& item : items) {
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = GetMultiplicity(item);
+            int otherCount = other->GetMultiplicity(item);
+            int diffCount = currentCount - otherCount;
+
+            if (diffCount > 0) {
+                for (int i = 0; i < diffCount; ++i) {
+                    result->Add(item);
+                }
+            }
+            processed.push_back(item);
+        }
+    }
+
+    return result;
+}
+
+// SymmetricDifference для MultiSet
+BaseSet* MultiSet::SymmetricDifference(const Set* other) const {
+    MultiSet* result = new MultiSet();
+    std::vector<int> processed;
+
+    for (const auto& item : items) {
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = GetMultiplicity(item);
+
+            if (!other->Exist(item)) {
+                for (int i = 0; i < currentCount; ++i) {
+                    result->Add(item);
+                }
+            }
+            processed.push_back(item);
         }
     }
 
     const auto& otherItems = other->GetItems();
     for (const auto& item : otherItems) {
-        int currentCount = GetMultiplicity(item.GetValue());
+        if (!Exist(item) &&
+            std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            result->Add(item);
+            processed.push_back(item);
+        }
+    }
+
+    return result;
+}
+
+BaseSet* MultiSet::SymmetricDifference(const MultiSet* other) const {
+    MultiSet* result = new MultiSet();
+    std::vector<int> processed;
+
+    for (const auto& item : items) {
+        if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+            int currentCount = GetMultiplicity(item);
+            int otherCount = other->GetMultiplicity(item);
+
+            if (otherCount == 0) {
+                for (int i = 0; i < currentCount; ++i) {
+                    result->Add(item);
+                }
+            }
+            else if (currentCount != otherCount) {
+                int diffCount = std::abs(currentCount - otherCount);
+                for (int i = 0; i < diffCount; ++i) {
+                    result->Add(item);
+                }
+            }
+            processed.push_back(item);
+        }
+    }
+
+    const auto& otherItems = other->GetItems();
+    for (const auto& item : otherItems) {
+        int currentCount = GetMultiplicity(item);
         if (currentCount == 0) {
-            result->Add(item.GetValue(), item.GetCount());
+            if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+                int otherCount = other->GetMultiplicity(item);
+                for (int i = 0; i < otherCount; ++i) {
+                    result->Add(item);
+                }
+                processed.push_back(item);
+            }
         }
     }
 
@@ -340,9 +480,19 @@ void MultiSet::Print() const {
         std::cout << "пусто";
     }
     else {
-        for (size_t i = 0; i < items.size(); ++i) {
-            std::cout << items[i].GetValue() << "(" << items[i].GetCount() << ")";
-            if (i < items.size() - 1) std::cout << ", ";
+        std::vector<int> processed;
+        bool first = true;
+
+        for (const auto& item : items) {
+            if (std::find(processed.begin(), processed.end(), item) == processed.end()) {
+                if (!first) {
+                    std::cout << ", ";
+                }
+                int count = GetMultiplicity(item);
+                std::cout << item << "(" << count << ")";
+                processed.push_back(item);
+                first = false;
+            }
         }
     }
     std::cout << " }" << std::endl;
@@ -352,8 +502,13 @@ void MultiSet::Print() const {
 
 Set* MultiSet::ToSet() {
     Set* set = new Set();
-    for (const auto& item : items) {
-        set->Add(item.GetValue());
+
+    std::vector<int> uniqueItems = items;
+    std::sort(uniqueItems.begin(), uniqueItems.end());
+    uniqueItems.erase(std::unique(uniqueItems.begin(), uniqueItems.end()), uniqueItems.end());
+
+    for (const auto& item : uniqueItems) {
+        set->Add(item);
     }
     return set;
 }
